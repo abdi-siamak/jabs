@@ -45,8 +45,7 @@ public class Snow<B extends SingleParentBlock<B>, T extends Tx<T>> extends Abstr
     public static int k = 2; // sample size
     private int alpha = k/2; // quorum size or threshold
     private int beta = 5; // conviction threshold
-    private double mean = 0.5; // Mean of the normal distribution
-    private double stdDev = 0.1; // Standard deviation of the normal distribution
+
     //*-------------------------------------------------------------------------------------------------------
     private static PrintWriter writer;
     private final int numAllParticipants;
@@ -100,10 +99,6 @@ public class Snow<B extends SingleParentBlock<B>, T extends Tx<T>> extends Abstr
             SnowBlockQuery<B> blockQuery = (SnowBlockQuery<B>) query;
             B block = blockQuery.getBlock();
             SnowNode peer = (SnowNode) this.peerBlockchainNode;
-            if(peer.currentBlock.getHeight() < block.getHeight()){ // If the node has not yet voted for the new block
-                double sample = generateNormalSample(this.peerBlockchainNode.getNetwork().getRandom(), mean, stdDev); // decides whether to vote for the new block or not
-                peer.currentBlock = sample >= 0.5 ?  (SnowBlock) block : peer.currentBlock;
-            }
             SnowNode inquirer = (SnowNode) blockQuery.getInquirer();
             switch (blockQuery.getQueryType()) {
                 case PREPARE :
@@ -111,6 +106,9 @@ public class Snow<B extends SingleParentBlock<B>, T extends Tx<T>> extends Abstr
                         this.localBlockTree.add(block);
                     }
                     if (this.localBlockTree.getLocalBlock(block).isConnectedToGenesis) {
+                        if(peer.currentBlock.getHeight() < block.getHeight()){ // If the node receives a new block
+                            peer.currentBlock = (SnowBlock) block; // update the current block
+                        }
                         this.snowPhase = SnowPhase.COMMITTING;
                         this.peerBlockchainNode.respondQuery(
                                 new QueryMessage(
@@ -129,45 +127,45 @@ public class Snow<B extends SingleParentBlock<B>, T extends Tx<T>> extends Abstr
     private void checkQueries(SnowBlockQuery<B> query, B block, HashMap<B, HashMap<Node, Query>> queries, Snow.SnowPhase nextStep) {
         this.snowPhase = nextStep;
         this.numReceivedSamples++;
-        List<Node> sampledNeighbors = sampleNeighbors(this.peerBlockchainNode.getNetwork().getRandom(), k);
+        List<Node> sampledNeighbors = sampleNeighbors(this.peerBlockchainNode.getNetwork().getRandom(), k); // k random neighbors to communicate with
         if (!queries.containsKey(block)) { // the first query reply received for the block
             queries.put(block, new HashMap<>());
         }
         queries.get(block).put(query.getInquirer(), query);
-        if (numReceivedSamples == k) { // if the node has received all the replies
+        if (numReceivedSamples == k) { // if the node has received all the query replies-checks the query replies
             this.numReceivedSamples = 0;
-            if(this.snowMode == SnowMode.TRANSFERRING){
-                if(!readyTransfer){
+            if(this.snowMode == SnowMode.TRANSFERRING){ // checks if it is in transferring mode, continue the loop
+                if(!readyTransfer){ // check if it should return to the normal mode, all nodes are transferred
                     this.snowMode = SnowMode.NORMAL;
                 }
                 queries.clear();
-                continueSampling(nextStep, sampledNeighbors, block); // Just to participate in the process
+                continueSampling(nextStep, sampledNeighbors, block); // continue the loop procedure
             }else if(this.snowMode == SnowMode.NORMAL){
-                if(committedNodes.contains(this.peerBlockchainNode)){ // if the node has reached consensus (beta threshold)
+                if(committedNodes.contains(this.peerBlockchainNode)){ // if the node has reached beta threshold (local consensus)
                     queries.clear();
-                    if(!this.consensus){
+                    if(!this.consensus){ // check the global consensus
                         checkConsensus(block);
                     }
-                    if(!readyTransfer){
-                        continueSampling(nextStep, sampledNeighbors, block); // Just to participate in the process
+                    if(!readyTransfer){ // check if it is ready to transfer to new round (a new consensus process)
+                        continueSampling(nextStep, sampledNeighbors, block); // continue the loop procedure
                     }else {
                         startGenerateNewBlock(nextStep, sampledNeighbors, block);
                     }
-                } else if ((queries.get(block).size() > alpha) && (block.getHeight()>this.currentMainChainHead.getHeight())) { // If a successful query for the block reaches the alpha value
+                }else if ((queries.get(block).size() > alpha) && (block.getHeight()>this.currentMainChainHead.getHeight())) { // If a successful query for the block (block that consensus on it should be done) reaches the alpha value a
                     this.conviction++;
                     queries.clear();
-                    if((this.conviction==beta)){ // if the node's conviction value reaches the beta value (local consensus)
+                    if((this.conviction==beta)){ // if the node's conviction value reaches the beta threshold (local consensus)
                         committedNodes.add(this.peerBlockchainNode);
                         this.conviction = 0;
                         if(!this.consensus){
                             checkConsensus(block);
                         }
                     }
-                    continueSampling(nextStep, sampledNeighbors, block); // Just to participate in the process
-                } else {
+                    continueSampling(nextStep, sampledNeighbors, block); // continue the loop procedure
+                }else {
                     queries.clear();
                     this.conviction = 0;
-                    continueSampling(nextStep, sampledNeighbors, block); // Just to participate in the process
+                    continueSampling(nextStep, sampledNeighbors, block); // try for re-sampling by continue the loop procedure
                 }
             }
         }
@@ -186,7 +184,7 @@ public class Snow<B extends SingleParentBlock<B>, T extends Tx<T>> extends Abstr
         }
         switch (nextStep) {
             case PREPARING:
-                if(this.peerBlockchainNode.nodeID == this.getCurrentPrimaryNumber()) { // The next node to start proposing a new block
+                if(this.peerBlockchainNode.nodeID == this.getCurrentPrimaryNumber()) { // The next proposer node to start proposing a new block
                     SnowNode snowNode = (SnowNode) this.peerBlockchainNode;
                     SnowBlock newBlock = BlockFactory.sampleSnowBlock(this.peerBlockchainNode.getSimulator(), this.peerBlockchainNode.getNetwork().getRandom(),
                             snowNode, (SnowBlock) block);
@@ -198,7 +196,7 @@ public class Snow<B extends SingleParentBlock<B>, T extends Tx<T>> extends Abstr
                                 ), destination
                         );
                     }
-                }else {
+                }else { // other nodes
                     SnowNode snowNode = (SnowNode) this.peerBlockchainNode;
                     snowNode.currentBlock = (SnowBlock) block;
                     for(Node destination:sampledNeighbors){
@@ -228,11 +226,11 @@ public class Snow<B extends SingleParentBlock<B>, T extends Tx<T>> extends Abstr
     }
 
     private void checkConsensus(B block) {
-        if(committedNodes.size() == getNumAllParticipants()){
+        if(committedNodes.size() == getNumAllParticipants()){ // checks the global consensus for the node
             //System.out.println("node "+this.peerBlockchainNode.nodeID+" is ready"+ " at "+this.peerBlockchainNode.getSimulator().getSimulationTime());
             this.consensus=true;
             numReadyNodes++;
-            if(numReadyNodes==getNumAllParticipants()){
+            if(numReadyNodes==getNumAllParticipants()){ // now all nodes are ready to transfer to a new consensus process
                 readyTransfer = true;
             }
             this.currentMainChainHead = block; // accepts the block

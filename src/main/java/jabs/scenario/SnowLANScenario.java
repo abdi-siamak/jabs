@@ -41,7 +41,7 @@ public class SnowLANScenario extends AbstractScenario{
     @Override
     protected void insertInitialEvents() {
         List<Node> nodes = network.getAllNodes();
-        Node startNode = nodes.get(0); // the first node that starts proposing a block
+        Node startNode = nodes.get(0); // the proposer node that starts proposing a new block to k randomly chosen neighbors
         SnowNode snowNode = (SnowNode) startNode;
         List<Node> sampledNeighbors = sampleNeighbors(startNode, Snow.k);
         SnowBlock snowBlock = BlockFactory.sampleSnowBlock(simulator, network.getRandom(),
@@ -55,7 +55,7 @@ public class SnowLANScenario extends AbstractScenario{
             );
         }
         //-----------------------------------
-        for(int n=1;n<nodes.size();n++){
+        for(int n=1;n<nodes.size();n++){ // other nodes that just do their loop procedure, query from k randomly chosen neighbors
             List<Node> samples = sampleNeighbors(nodes.get(n), Snow.k);
             SnowNode otherNodes = (SnowNode) nodes.get(n);
             otherNodes.currentBlock = SNOW_GENESIS_BLOCK;

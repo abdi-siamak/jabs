@@ -52,8 +52,8 @@ public class Main {
         scenario.run();
 */
         // Simulate Snow LAN network of 40 nodes for 1 hour
-        scenario = new SnowLANScenario("One hour of a Snow lan Network", 1, 40,
-                3600);
+        scenario = new SnowLANScenario("One hour of a Snow lan Network", 1, 3,
+                60);
         scenario.AddNewLogger(new SnowCSVLogger(Paths.get("output/snow-simulation-log.csv")));
         scenario.run();
     }
