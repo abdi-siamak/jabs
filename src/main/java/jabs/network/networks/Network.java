@@ -15,6 +15,7 @@ public abstract class Network<N extends Node, NodeType extends Enum<NodeType>> {
     protected final RandomnessEngine randomnessEngine;
     public final NetworkStats<NodeType> networkStats;
     public final HashMap<N, NodeType> nodeTypes = new HashMap<>();
+    public final HashMap<N, List<N>> neighbors = new HashMap<>(); // to generate neighborhoods for nodes
 
     protected Network(RandomnessEngine randomnessEngine, NetworkStats<NodeType> networkStats) {
         this.randomnessEngine = randomnessEngine;
@@ -54,8 +55,17 @@ public abstract class Network<N extends Node, NodeType extends Enum<NodeType>> {
         nodeTypes.put(node, nodeType);
     }
 
+    public List<N> getNeighbors(N node) {
+        //System.out.println("#of neighbors of node "+ node.getNodeID()+" : " +neighbors.get(node).size());
+        return neighbors.get(node);
+    }
+
     public RandomnessEngine getRandom() {
         return this.randomnessEngine;
+    }
+
+    public void generatePowerLawNeighbors(double alpha, int averageDegree, RandomnessEngine randomnessEngine){
+        // Custom implementation specific to LocalLANNetworks
     }
 }
 

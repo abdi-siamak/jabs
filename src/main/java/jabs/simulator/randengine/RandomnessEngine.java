@@ -70,6 +70,23 @@ public class RandomnessEngine extends MersenneTwister {
         return this.nextInt(max);
     }
 
+    public int nextInt(int origin, int bound) {
+        if (origin >= bound) {
+            throw new IllegalArgumentException("bound must be greater than origin");
+        }
+        int range = bound - origin;
+        return origin + nextIntRange(range);
+    }
+
+    public int nextIntRange(int range) {
+        int bits = 31 - Integer.numberOfLeadingZeros(range);
+        int result;
+        do {
+            result = next(bits);
+        } while (result >= range);
+        return result;
+    }
+
     public double sampleDouble(double max) {
         return this.nextDouble() * max;
     }
