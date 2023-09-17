@@ -34,6 +34,7 @@ public class SnowLocalLANNetwork extends Network<SnowNode, SingleNodeType> {
             this.addNode(createNewSnowNode(simulator, i, numNodes), SingleNodeType.LAN_NODE);
         }
 
+        generatePowerLawNeighbors(2.5, 20, randomnessEngine); // to create a connected network
         for (Node node:this.getAllNodes()) {
             node.getP2pConnections().connectToNetwork(this);
         }
