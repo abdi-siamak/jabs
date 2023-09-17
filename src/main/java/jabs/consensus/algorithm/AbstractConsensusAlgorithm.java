@@ -90,4 +90,5 @@ public abstract class AbstractConsensusAlgorithm<B extends Block<B>, T extends T
     public int getNumOfConfirmedTxs() {
         return confirmedTxs.size();
     }
+    public HashSet<B> getConfirmedBlocks(){ return confirmedBlocks; }
 }

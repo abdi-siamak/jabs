@@ -136,4 +136,6 @@ public abstract class AbstractScenario {
 
         System.err.printf("Finished %s.\n", this.name);
     }
+
+    abstract protected void peerLocalLedger();
 }

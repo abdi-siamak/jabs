@@ -10,8 +10,10 @@ import jabs.network.networks.snow.SnowLocalLANNetwork;
 import jabs.network.node.nodes.Node;
 import jabs.network.node.nodes.snow.SnowNode;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.util.*;
 
 import static jabs.network.node.nodes.snow.SnowNode.SNOW_GENESIS_BLOCK;
 
@@ -23,6 +25,18 @@ import static jabs.network.node.nodes.snow.SnowNode.SNOW_GENESIS_BLOCK;
  */
 
 public class SnowLANScenario extends AbstractScenario{
+    static {
+        try {
+            File file = new File("output/snow-LANNetwork-localLedgers-log.txt");
+            if (file.exists()) {
+                file.delete();
+            }
+            writer = new PrintWriter(new FileWriter(file, true));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    private static PrintWriter writer;
     protected int numNodes;
     protected double simulationStopTime;
 
@@ -85,4 +99,31 @@ public class SnowLANScenario extends AbstractScenario{
         return (simulator.getSimulationTime() > this.simulationStopTime);
     }
 
+    @Override
+    protected void peerLocalLedger() {
+        List<SnowNode> nodes = network.getAllNodes();
+        for (SnowNode node : nodes){
+            HashSet<SnowBlock> localLedger = node.getConsensusAlgorithm().getConfirmedBlocks();
+            List<SnowBlock> blocks = getOrdered(localLedger);
+            writer.println("Local ledger node "+node.getNodeID() +":");
+            for(SnowBlock block:blocks){
+                writer.println("block: "+block.getHeight() + ", Parent: "+block.getParent().getHeight()+", Creator: "+block.getCreator().getNodeID()+", Size: "
+                        +block.getSize()+", Creation_Time: "+block.getCreationTime()+", Hash: "+block.hashCode());            }
+            writer.println("-----------------------------------------");
+            writer.flush();
+        }
+    }
+    private List<SnowBlock> getOrdered(HashSet<SnowBlock> localLedger) {
+        class BlockHeightComparator implements Comparator<SnowBlock> {
+            @Override
+            public int compare(SnowBlock block1, SnowBlock block2) {
+                int height1 = block1.getHeight();
+                int height2 = block2.getHeight();
+                return Integer.compare(height1, height2);
+            }
+        }
+        List<SnowBlock> blockList = new ArrayList<>(localLedger);
+        Collections.sort(blockList, new BlockHeightComparator());
+        return blockList;
+    }
 }
