@@ -133,7 +133,7 @@ public abstract class AbstractScenario {
         for (AbstractLogger logger:this.loggers) {
             logger.finalLog();
         }
-
+        this.peerLocalLedger();
         System.err.printf("Finished %s.\n", this.name);
     }
 
