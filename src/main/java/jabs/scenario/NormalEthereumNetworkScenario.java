@@ -43,4 +43,9 @@ public class NormalEthereumNetworkScenario extends AbstractScenario {
     public boolean simulationStopCondition() {
         return (simulator.getSimulationTime() > simulationStopTime);
     }
+
+    @Override
+    protected void peerLocalLedger() {
+
+    }
 }

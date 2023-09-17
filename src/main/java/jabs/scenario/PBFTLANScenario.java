@@ -43,4 +43,9 @@ public class PBFTLANScenario extends AbstractScenario {
     public boolean simulationStopCondition() {
         return (simulator.getSimulationTime() > this.simulationStopTime);
     }
+
+    @Override
+    protected void peerLocalLedger() {
+
+    }
 }
